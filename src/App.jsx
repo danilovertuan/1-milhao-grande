@@ -100,13 +100,14 @@ export default function App() {
   };
 
   // 🔹 Cálculos
-  const total =
-    Number(history[0]?.danValue || 0) + Number(history[0]?.driValue || 0);
-  const danRemaining = myTarget - (history[0]?.danValue || 0);
-  const driRemaining = herTarget - (history[0]?.driValue || 0);
-  const jointTarget = myTarget + herTarget;
-  const jointRemaining = jointTarget - total;
+const totalDan = history.reduce((acc, entry) => acc + Number(entry.danValue || 0), 0);
+const totalDri = history.reduce((acc, entry) => acc + Number(entry.driValue || 0), 0);
+const totalConjunto = totalDan + totalDri;
 
+const danRemaining = myTarget - totalDan;
+const driRemaining = herTarget - totalDri;
+const jointRemaining = (myTarget + herTarget) - totalConjunto;
+  
   // 🔹 Estimativa de crescimento
   const estimateProjection = () => {
     let months = monthsGoal;
