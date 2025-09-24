@@ -16,7 +16,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 
-// 🔹 COLE AQUI SUA CONFIG DO FIREBASE
+// 🔹 Configuração Firebase
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_PROJECT.firebaseapp.com",
@@ -27,14 +27,29 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
+// 🔹 Autenticação Firebase
 const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// Função de login com Google
+const handleLogin = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    console.log("Usuário logado:", result.user);
+  } catch (error) {
+    console.error("Erro no login:", error);
+    alert("Erro ao fazer login: " + error.message);
+  }
+};
+
 const db = getFirestore(app);
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [myTarget, setMyTarget] = useState(780000);
   const [herTarget, setHerTarget] = useState(220000);
-  const [monthlyReturn, setMonthlyReturn] = useState(1); // em %
+  const [monthlyReturn, setMonthlyReturn] = useState(1); // %
   const [monthsGoal, setMonthsGoal] = useState(34); // 2 anos e 10 meses
 
   const [danValue, setDanValue] = useState("");
@@ -43,16 +58,11 @@ export default function App() {
   const [driMonthlyInvest, setDriMonthlyInvest] = useState("");
   const [history, setHistory] = useState([]);
 
-  // 🔹 Login/Logout
+  // 🔹 Monitorar login
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsubscribe();
   }, []);
-
-  const login = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  };
 
   const logout = async () => {
     await signOut(auth);
@@ -96,7 +106,7 @@ export default function App() {
   const jointTarget = myTarget + herTarget;
   const jointRemaining = jointTarget - total;
 
-  // 🔹 Estimativa de crescimento com aportes + rendimento
+  // 🔹 Estimativa de crescimento
   const estimateProjection = () => {
     let months = monthsGoal;
     let proj = [];
@@ -123,7 +133,7 @@ export default function App() {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-100">
         <button
-          onClick={login}
+          onClick={handleLogin}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md"
         >
           Entrar com Google
@@ -157,7 +167,7 @@ export default function App() {
             />
           </div>
           <div>
-            <label className="block text-sm">Meta DRI</label>
+            <label className="block text-sm">Meta Dri</label>
             <input
               type="number"
               value={herTarget}
@@ -200,7 +210,7 @@ export default function App() {
             />
           </div>
           <div>
-            <label className="block mb-1 text-purple-600 font-semibold">DRI</label>
+            <label className="block mb-1 text-purple-600 font-semibold">Dri</label>
             <input
               type="number"
               value={driValue}
@@ -218,7 +228,7 @@ export default function App() {
             />
           </div>
           <div>
-            <label className="block mb-1 text-purple-600 font-semibold">Aporte DRI</label>
+            <label className="block mb-1 text-purple-600 font-semibold">Aporte Dri</label>
             <input
               type="number"
               value={driMonthlyInvest}
@@ -239,22 +249,11 @@ export default function App() {
       <div className="bg-white shadow rounded p-4 mb-6">
         <h2 className="font-semibold mb-2">Situação atual</h2>
         <p className="text-blue-800">Dan restante: R$ {danRemaining.toLocaleString()}</p>
-        <p className="text-purple-600">DRI restante: R$ {driRemaining.toLocaleString()}</p>
+        <p className="text-purple-600">Dri restante: R$ {driRemaining.toLocaleString()}</p>
         <p>Total conjunto: R$ {total.toLocaleString()}</p>
         <p>Restante conjunto: R$ {jointRemaining.toLocaleString()}</p>
       </div>
 
       {/* Projeção */}
       <div className="bg-white shadow rounded p-4">
-        <h2 className="font-semibold mb-2">Projeção ({monthsGoal} meses)</h2>
-        <ul className="space-y-1 max-h-64 overflow-y-auto">
-          {projection.map((p) => (
-            <li key={p.month} className="text-sm">
-              Mês {p.month}: <span className="text-blue-800">Dan R$ {p.dan.toLocaleString()}</span> | <span className="text-purple-600">DRI R$ {p.dri.toLocaleString()}</span> | Total R$ {p.total.toLocaleString()}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
+        <h2 className="font-semibold mb-2">Proje
