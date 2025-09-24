@@ -32,8 +32,9 @@ const app = initializeApp(firebaseConfig);
 // 🔹 Autenticação Firebase
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
 
-// Função de login com Google
+// Função de login
 const handleLogin = async () => {
   try {
     const result = await signInWithPopup(auth, provider);
@@ -44,14 +45,14 @@ const handleLogin = async () => {
   }
 };
 
-const db = getFirestore(app);
-
 export default function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const [myTarget, setMyTarget] = useState(780000);
   const [herTarget, setHerTarget] = useState(220000);
-  const [monthlyReturn, setMonthlyReturn] = useState(1); // %
-  const [monthsGoal, setMonthsGoal] = useState(34); // 2 anos e 10 meses
+  const [monthlyReturn, setMonthlyReturn] = useState(1);
+  const [monthsGoal, setMonthsGoal] = useState(34);
 
   const [danValue, setDanValue] = useState("");
   const [driValue, setDriValue] = useState("");
@@ -61,7 +62,10 @@ export default function App() {
 
   // 🔹 Monitorar login
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -99,23 +103,22 @@ export default function App() {
     setDriValue("");
   };
 
-  // 🔹 Cálculos
-const totalDan = history.reduce((acc, entry) => acc + Number(entry.danValue || 0), 0);
-const totalDri = history.reduce((acc, entry) => acc + Number(entry.driValue || 0), 0);
-const totalConjunto = totalDan + totalDri;
+  // 🔹 Cálculos acumulados
+  const totalDan = history.reduce((acc, entry) => acc + Number(entry.danValue || 0), 0);
+  const totalDri = history.reduce((acc, entry) => acc + Number(entry.driValue || 0), 0);
+  const totalConjunto = totalDan + totalDri;
 
-const danRemaining = myTarget - totalDan;
-const driRemaining = herTarget - totalDri;
-const jointRemaining = (myTarget + herTarget) - totalConjunto;
-  
+  const danRemaining = myTarget - totalDan;
+  const driRemaining = herTarget - totalDri;
+  const jointRemaining = (myTarget + herTarget) - totalConjunto;
+
   // 🔹 Estimativa de crescimento
   const estimateProjection = () => {
-    let months = monthsGoal;
     let proj = [];
-    let dan = history[0]?.danValue || 0;
-    let dri = history[0]?.driValue || 0;
+    let dan = totalDan;
+    let dri = totalDri;
 
-    for (let i = 1; i <= months; i++) {
+    for (let i = 1; i <= monthsGoal; i++) {
       dan = dan * (1 + monthlyReturn / 100) + Number(danMonthlyInvest || 0);
       dri = dri * (1 + monthlyReturn / 100) + Number(driMonthlyInvest || 0);
       proj.push({
@@ -131,6 +134,13 @@ const jointRemaining = (myTarget + herTarget) - totalConjunto;
   const projection = estimateProjection();
 
   // 🔹 UI
+  if (loading)
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <p>Carregando...</p>
+      </div>
+    );
+
   if (!user)
     return (
       <div className="flex h-screen items-center justify-center bg-gray-100">
@@ -164,7 +174,7 @@ const jointRemaining = (myTarget + herTarget) - totalConjunto;
             <input
               type="number"
               value={myTarget}
-              onChange={(e) => setMyTarget(e.target.value)}
+              onChange={(e) => setMyTarget(Number(e.target.value))}
               className="border p-2 rounded w-full"
             />
           </div>
@@ -173,7 +183,7 @@ const jointRemaining = (myTarget + herTarget) - totalConjunto;
             <input
               type="number"
               value={herTarget}
-              onChange={(e) => setHerTarget(e.target.value)}
+              onChange={(e) => setHerTarget(Number(e.target.value))}
               className="border p-2 rounded w-full"
             />
           </div>
@@ -182,7 +192,7 @@ const jointRemaining = (myTarget + herTarget) - totalConjunto;
             <input
               type="number"
               value={monthlyReturn}
-              onChange={(e) => setMonthlyReturn(e.target.value)}
+              onChange={(e) => setMonthlyReturn(Number(e.target.value))}
               className="border p-2 rounded w-full"
             />
           </div>
@@ -191,7 +201,7 @@ const jointRemaining = (myTarget + herTarget) - totalConjunto;
             <input
               type="number"
               value={monthsGoal}
-              onChange={(e) => setMonthsGoal(e.target.value)}
+              onChange={(e) => setMonthsGoal(Number(e.target.value))}
               className="border p-2 rounded w-full"
             />
           </div>
@@ -252,7 +262,7 @@ const jointRemaining = (myTarget + herTarget) - totalConjunto;
         <h2 className="font-semibold mb-2">Situação atual</h2>
         <p className="text-blue-800">Dan restante: R$ {danRemaining.toLocaleString()}</p>
         <p className="text-purple-600">Dri restante: R$ {driRemaining.toLocaleString()}</p>
-        <p>Total conjunto: R$ {total.toLocaleString()}</p>
+        <p>Total conjunto: R$ {totalConjunto.toLocaleString()}</p>
         <p>Restante conjunto: R$ {jointRemaining.toLocaleString()}</p>
       </div>
 
@@ -267,6 +277,6 @@ const jointRemaining = (myTarget + herTarget) - totalConjunto;
           ))}
         </ul>
       </div>
-    </div> // fecha o container principal
+    </div>
   );
 }
