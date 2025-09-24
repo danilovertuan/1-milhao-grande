@@ -257,4 +257,15 @@ export default function App() {
 
       {/* Projeção */}
       <div className="bg-white shadow rounded p-4">
-        <h2 className="font-semibold mb-2">Proje
+        <h2 className="font-semibold mb-2">Projeção ({monthsGoal} meses)</h2>
+        <ul className="space-y-1 max-h-64 overflow-y-auto">
+          {projection.map((p) => (
+            <li key={p.month} className="text-sm">
+              Mês {p.month}: <span className="text-blue-800">Dan R$ {p.dan.toLocaleString()}</span> | <span className="text-purple-600">Dri R$ {p.dri.toLocaleString()}</span> | Total R$ {p.total.toLocaleString()}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div> // fecha o container principal
+  );
+}
