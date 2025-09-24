@@ -9,10 +9,6 @@ import {
 } from "firebase/auth";
 import {
   getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
   collection,
   addDoc,
   query,
@@ -22,13 +18,12 @@ import {
 
 // 🔹 COLE AQUI SUA CONFIG DO FIREBASE
 const firebaseConfig = {
-  apiKey: "AIzaSyD92OfyBzYu-2KboRR9Jw4X8rFzniJEFzk",
-  authDomain: "milho-grande-e189a.firebaseapp.com",
-  projectId: "milho-grande-e189a",
-  storageBucket: "milho-grande-e189a.firebasestorage.app",
-  messagingSenderId: "825882602807",
-  appId: "1:825882602807:web:c8f2578567e74a1881beb2",
-  measurementId: "G-4JNE738GL7"
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJECT.firebaseapp.com",
+  projectId: "SEU_PROJECT_ID",
+  storageBucket: "SEU_PROJECT.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId: "SEU_APP_ID",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -42,10 +37,10 @@ export default function App() {
   const [monthlyReturn, setMonthlyReturn] = useState(1); // em %
   const [monthsGoal, setMonthsGoal] = useState(34); // 2 anos e 10 meses
 
-  const [myValue, setMyValue] = useState("");
-  const [herValue, setHerValue] = useState("");
-  const [myMonthlyInvest, setMyMonthlyInvest] = useState("");
-  const [herMonthlyInvest, setHerMonthlyInvest] = useState("");
+  const [danValue, setDanValue] = useState("");
+  const [driValue, setDriValue] = useState("");
+  const [danMonthlyInvest, setDanMonthlyInvest] = useState("");
+  const [driMonthlyInvest, setDriMonthlyInvest] = useState("");
   const [history, setHistory] = useState([]);
 
   // 🔹 Login/Logout
@@ -81,24 +76,23 @@ export default function App() {
   const saveValues = async () => {
     if (!user) return;
     const data = {
-      myValue: Number(myValue),
-      herValue: Number(herValue),
-      myMonthlyInvest: Number(myMonthlyInvest),
-      herMonthlyInvest: Number(herMonthlyInvest),
+      danValue: Number(danValue),
+      driValue: Number(driValue),
+      danMonthlyInvest: Number(danMonthlyInvest),
+      driMonthlyInvest: Number(driMonthlyInvest),
       date: new Date().toISOString(),
     };
     await addDoc(collection(db, "households", "default", "entries"), data);
     setHistory([data, ...history]);
-    setMyValue("");
-    setHerValue("");
+    setDanValue("");
+    setDriValue("");
   };
 
   // 🔹 Cálculos
-  const total = history.length
-    ? history[0].myValue + history[0].herValue
-    : 0;
-  const myRemaining = myTarget - (history[0]?.myValue || 0);
-  const herRemaining = herTarget - (history[0]?.herValue || 0);
+  const total =
+    Number(history[0]?.danValue || 0) + Number(history[0]?.driValue || 0);
+  const danRemaining = myTarget - (history[0]?.danValue || 0);
+  const driRemaining = herTarget - (history[0]?.driValue || 0);
   const jointTarget = myTarget + herTarget;
   const jointRemaining = jointTarget - total;
 
@@ -106,17 +100,17 @@ export default function App() {
   const estimateProjection = () => {
     let months = monthsGoal;
     let proj = [];
-    let m = history[0]?.myValue || 0;
-    let h = history[0]?.herValue || 0;
+    let dan = history[0]?.danValue || 0;
+    let dri = history[0]?.driValue || 0;
 
     for (let i = 1; i <= months; i++) {
-      m = m * (1 + monthlyReturn / 100) + Number(myMonthlyInvest || 0);
-      h = h * (1 + monthlyReturn / 100) + Number(herMonthlyInvest || 0);
+      dan = dan * (1 + monthlyReturn / 100) + Number(danMonthlyInvest || 0);
+      dri = dri * (1 + monthlyReturn / 100) + Number(driMonthlyInvest || 0);
       proj.push({
         month: i,
-        my: Math.round(m),
-        her: Math.round(h),
-        total: Math.round(m + h),
+        dan: Math.round(dan),
+        dri: Math.round(dri),
+        total: Math.round(dan + dri),
       });
     }
     return proj;
@@ -153,69 +147,85 @@ export default function App() {
       <div className="bg-white shadow rounded p-4 mb-6">
         <h2 className="font-semibold mb-2">Configurações</h2>
         <div className="grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            value={myTarget}
-            onChange={(e) => setMyTarget(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="Minha meta"
-          />
-          <input
-            type="number"
-            value={herTarget}
-            onChange={(e) => setHerTarget(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="Meta dela"
-          />
-          <input
-            type="number"
-            value={monthlyReturn}
-            onChange={(e) => setMonthlyReturn(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="% rendimento mês"
-          />
-          <input
-            type="number"
-            value={monthsGoal}
-            onChange={(e) => setMonthsGoal(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="Meses até a meta"
-          />
+          <div>
+            <label className="block text-sm">Meta Dan</label>
+            <input
+              type="number"
+              value={myTarget}
+              onChange={(e) => setMyTarget(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm">Meta DRI</label>
+            <input
+              type="number"
+              value={herTarget}
+              onChange={(e) => setHerTarget(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm">% Rendimento/mês</label>
+            <input
+              type="number"
+              value={monthlyReturn}
+              onChange={(e) => setMonthlyReturn(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm">Meses até a meta</label>
+            <input
+              type="number"
+              value={monthsGoal}
+              onChange={(e) => setMonthsGoal(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
         </div>
       </div>
 
       {/* Registro mensal */}
       <div className="bg-white shadow rounded p-4 mb-6">
         <h2 className="font-semibold mb-2">Registrar mês</h2>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            value={myValue}
-            onChange={(e) => setMyValue(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="Meu patrimônio"
-          />
-          <input
-            type="number"
-            value={herValue}
-            onChange={(e) => setHerValue(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="Patrimônio dela"
-          />
-          <input
-            type="number"
-            value={myMonthlyInvest}
-            onChange={(e) => setMyMonthlyInvest(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="Meu aporte mensal"
-          />
-          <input
-            type="number"
-            value={herMonthlyInvest}
-            onChange={(e) => setHerMonthlyInvest(e.target.value)}
-            className="border p-2 rounded"
-            placeholder="Aporte mensal dela"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 text-blue-800 font-semibold">Dan</label>
+            <input
+              type="number"
+              value={danValue}
+              onChange={(e) => setDanValue(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1 text-purple-600 font-semibold">DRI</label>
+            <input
+              type="number"
+              value={driValue}
+              onChange={(e) => setDriValue(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1 text-blue-800 font-semibold">Aporte Dan</label>
+            <input
+              type="number"
+              value={danMonthlyInvest}
+              onChange={(e) => setDanMonthlyInvest(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1 text-purple-600 font-semibold">Aporte DRI</label>
+            <input
+              type="number"
+              value={driMonthlyInvest}
+              onChange={(e) => setDriMonthlyInvest(e.target.value)}
+              className="border p-2 rounded w-full"
+            />
+          </div>
         </div>
         <button
           onClick={saveValues}
@@ -228,8 +238,8 @@ export default function App() {
       {/* Status atual */}
       <div className="bg-white shadow rounded p-4 mb-6">
         <h2 className="font-semibold mb-2">Situação atual</h2>
-        <p>Meu restante: R$ {myRemaining.toLocaleString()}</p>
-        <p>Restante dela: R$ {herRemaining.toLocaleString()}</p>
+        <p className="text-blue-800">Dan restante: R$ {danRemaining.toLocaleString()}</p>
+        <p className="text-purple-600">DRI restante: R$ {driRemaining.toLocaleString()}</p>
         <p>Total conjunto: R$ {total.toLocaleString()}</p>
         <p>Restante conjunto: R$ {jointRemaining.toLocaleString()}</p>
       </div>
@@ -240,9 +250,7 @@ export default function App() {
         <ul className="space-y-1 max-h-64 overflow-y-auto">
           {projection.map((p) => (
             <li key={p.month} className="text-sm">
-              Mês {p.month}: Eu R$ {p.my.toLocaleString()} | Ela R${" "}
-              {p.her.toLocaleString()} | Total R${" "}
-              {p.total.toLocaleString()}
+              Mês {p.month}: <span className="text-blue-800">Dan R$ {p.dan.toLocaleString()}</span> | <span className="text-purple-600">DRI R$ {p.dri.toLocaleString()}</span> | Total R$ {p.total.toLocaleString()}
             </li>
           ))}
         </ul>
