@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -10,8 +10,12 @@ export default function App() {
   const [driValue, setDriValue] = useState(0);
   const [totalValue, setTotalValue] = useState(0);
 
-  const [history, setHistory] = useState([]);
   const [metaValue, setMetaValue] = useState(1000000);
+  const [monthlyReturn, setMonthlyReturn] = useState(1); // %
+  const [danMonthlyInvest, setDanMonthlyInvest] = useState(5000);
+  const [driMonthlyInvest, setDriMonthlyInvest] = useState(5000);
+
+  const [history, setHistory] = useState([]);
 
   // 🔹 Autenticação local
   const handlePasswordSubmit = () => {
@@ -19,7 +23,7 @@ export default function App() {
     else alert("Senha incorreta!");
   };
 
-  // 🔹 Carregar valores mais recentes
+  // 🔹 Carregar valores atuais
   const loadValues = async () => {
     const docRef = doc(db, "households", "default");
     const docSnap = await getDoc(docRef);
@@ -28,15 +32,25 @@ export default function App() {
       setDanValue(data.danValue || 0);
       setDriValue(data.driValue || 0);
       setTotalValue((data.danValue || 0) + (data.driValue || 0));
+      setMetaValue(data.metaValue || 1000000);
+      setMonthlyReturn(data.monthlyReturn || 1);
+      setDanMonthlyInvest(data.danMonthlyInvest || 5000);
+      setDriMonthlyInvest(data.driMonthlyInvest || 5000);
     }
   };
 
-  // 🔹 Carregar histórico
+  // 🔹 Carregar histórico 30 meses
   const loadHistory = async () => {
     const colRef = collection(db, "households", "history");
     const snapshot = await getDocs(colRef);
-    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setHistory(data);
+    const data = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (data.length === 0) {
+      generateHistory(); // se não existe, cria automaticamente
+    } else {
+      setHistory(data);
+    }
   };
 
   useEffect(() => {
@@ -52,9 +66,42 @@ export default function App() {
       danValue: Number(dan),
       driValue: Number(dri),
       totalValue: Number(dan) + Number(dri),
-      date: new Date().toISOString()
+      metaValue,
+      monthlyReturn,
+      danMonthlyInvest,
+      driMonthlyInvest,
+      date: new Date().toISOString(),
     });
     setTotalValue(Number(dan) + Number(dri));
+  };
+
+  // 🔹 Gerar 30 meses de histórico
+  const generateHistory = async () => {
+    let dan = Number(danValue);
+    let dri = Number(driValue);
+    const newHistory = [];
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const monthDate = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const mm = String(monthDate.getMonth() + 1).padStart(2, "0");
+      const aa = String(monthDate.getFullYear()).slice(-2);
+      dan = Math.round(dan * (1 + monthlyReturn / 100) + Number(danMonthlyInvest));
+      dri = Math.round(dri * (1 + monthlyReturn / 100) + Number(driMonthlyInvest));
+      const total = dan + dri;
+
+      const entry = {
+        date: `${mm}/${aa}`,
+        dan,
+        dri,
+        total,
+        meta: Math.round(metaValue / 30),
+      };
+      newHistory.push(entry);
+
+      // salvar no Firestore
+      await setDoc(doc(db, "households", "history", `${i + 1}`), entry);
+    }
+    setHistory(newHistory);
   };
 
   const getStatusColor = () => {
@@ -87,7 +134,7 @@ export default function App() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-xl font-bold mb-4">💰 1 Milhão Grande</h1>
 
       {/* Valores editáveis */}
@@ -143,8 +190,8 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {history.map((line) => (
-              <tr key={line.id}>
+            {history.map((line, idx) => (
+              <tr key={idx}>
                 <td className="border px-2 py-1">{line.date}</td>
                 <td className="border px-2 py-1">
                   <input
@@ -152,7 +199,7 @@ export default function App() {
                     value={line.dan}
                     onChange={async (e) => {
                       const newLine = { ...line, dan: Number(e.target.value), total: Number(e.target.value) + Number(line.dri) };
-                      await setDoc(doc(db, "households", "history", line.id), newLine);
+                      await setDoc(doc(db, "households", "history", `${idx + 1}`), newLine);
                       loadHistory();
                     }}
                     className="border p-1 w-full"
@@ -164,7 +211,7 @@ export default function App() {
                     value={line.dri}
                     onChange={async (e) => {
                       const newLine = { ...line, dri: Number(e.target.value), total: Number(line.dan) + Number(e.target.value) };
-                      await setDoc(doc(db, "households", "history", line.id), newLine);
+                      await setDoc(doc(db, "households", "history", `${idx + 1}`), newLine);
                       loadHistory();
                     }}
                     className="border p-1 w-full"
@@ -177,7 +224,7 @@ export default function App() {
                     value={line.meta || metaValue}
                     onChange={async (e) => {
                       const newLine = { ...line, meta: Number(e.target.value) };
-                      await setDoc(doc(db, "households", "history", line.id), newLine);
+                      await setDoc(doc(db, "households", "history", `${idx + 1}`), newLine);
                       loadHistory();
                     }}
                     className="border p-1 w-full"
