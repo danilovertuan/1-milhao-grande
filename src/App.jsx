@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  collection,
+  query,
+  orderBy
+} from "firebase/firestore";
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -13,13 +20,13 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [metaValue, setMetaValue] = useState(1000000);
 
-  // 🔹 Autenticação por senha
+  // 🔹 Autenticação local
   const handlePasswordSubmit = () => {
     if (password === "atena") setAuthenticated(true);
     else alert("Senha incorreta!");
   };
 
-  // 🔹 Carregar valores em tempo real
+  // 🔹 Carregar valores mais recentes
   useEffect(() => {
     const docRef = doc(db, "households", "default");
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -33,7 +40,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 🔹 Carregar histórico em tempo real
+  // 🔹 Carregar histórico 30 linhas
   useEffect(() => {
     const colRef = collection(db, "households", "history");
     const q = query(colRef, orderBy("date"));
@@ -169,7 +176,7 @@ export default function App() {
                 <td className="border px-2 py-1">
                   <input
                     type="number"
-                    value={line.meta}
+                    value={line.meta || metaValue}
                     onChange={(e) => {
                       const newLine = { ...line, meta: Number(e.target.value) };
                       setDoc(doc(db, "households", "history", line.id), newLine);
