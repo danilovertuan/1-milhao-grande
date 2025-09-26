@@ -1,135 +1,189 @@
+// src/App.jsx
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import History from "./pages/History";
-import Meta from "./pages/Meta";
-
-const STORAGE_KEY = "milhao_grande_app_state_v1";
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
+import { db } from "./firebase";
+import { doc, setDoc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 
 export default function App() {
-  // global app state
-  const saved = loadState() || {};
-  const [locked, setLocked] = useState(saved.locked ?? true); // locked = require password
-  const [meta, setMeta] = useState(saved.meta ?? {
-    initialDan: 0,
-    initialDri: 0,
-    monthlyReturnPct: 1,
-    aporteDan: 0,
-    aporteDri: 0
-  });
-  const [history, setHistory] = useState(saved.history ?? generateInitialHistory()); // array of 30 rows
-  // history rows: { id, mm_aa: "09/25", dan: number, dri: number, total: number, meta: number }
+  const [authenticated, setAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
 
-  // persist on change
+  const [danValue, setDanValue] = useState(0);
+  const [driValue, setDriValue] = useState(0);
+  const [totalValue, setTotalValue] = useState(0);
+
+  const [history, setHistory] = useState([]);
+  const [metaValue, setMetaValue] = useState(1000000); // meta Total
+
+  // 🔹 Autenticação por senha
+  const handlePasswordSubmit = () => {
+    if (password === "atena") setAuthenticated(true);
+    else alert("Senha incorreta!");
+  };
+
+  // 🔹 Carregar valores em tempo real
   useEffect(() => {
-    saveState({ locked, meta, history });
-  }, [locked, meta, history]);
+    const docRef = doc(db, "households", "default");
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setDanValue(data.danValue || 0);
+        setDriValue(data.driValue || 0);
+        setTotalValue((data.danValue || 0) + (data.driValue || 0));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-  // helper: generate 30 months starting 09/2025 (mm/aa)
-  function generateInitialHistory() {
-    const start = new Date(2025, 8, 1); // September 2025 (month index 8)
-    const arr = [];
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const yy = String(d.getFullYear()).slice(2);
-      arr.push({
-        id: i + 1,
-        mm_aa: `${mm}/${yy}`,
-        dan: 0,
-        dri: 0,
-        total: 0,
-        meta: 0
-      });
-    }
-    return arr;
+  // 🔹 Carregar histórico em tempo real
+  useEffect(() => {
+    const colRef = collection(db, "households", "history");
+    const q = query(colRef, orderBy("date"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setHistory(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 🔹 Atualizar valores Dan/Dri
+  const updateValues = async (dan, dri) => {
+    await setDoc(doc(db, "households", "default"), {
+      danValue: Number(dan),
+      driValue: Number(dri),
+      totalValue: Number(dan) + Number(dri),
+      date: new Date().toISOString()
+    });
+  };
+
+  // 🔹 Calcula cor da barra de status
+  const getStatusColor = () => {
+    if (totalValue >= metaValue) return "bg-green-500";
+    if (totalValue >= metaValue * 0.8) return "bg-orange-500";
+    return "bg-red-500";
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="bg-white shadow-md rounded p-6 w-80">
+          <h2 className="text-lg font-bold mb-4 text-center">Digite a senha</h2>
+          <input
+            type="password"
+            placeholder="Senha"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border p-2 rounded w-full mb-3"
+          />
+          <button
+            onClick={handlePasswordSubmit}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Entrar
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  // recalc totals for each history row (total = dan + dri) and compute meta column from meta params
-  useEffect(() => {
-    // compute meta series from meta params
-    const series = [];
-    let dan = Number(meta.initialDan || 0);
-    let dri = Number(meta.initialDri || 0);
-    const r = Number(meta.monthlyReturnPct || 0) / 100;
-    const aDan = Number(meta.aporteDan || 0);
-    const aDri = Number(meta.aporteDri || 0);
-    for (let i = 0; i < history.length; i++) {
-      // first row meta uses formula from previous (so we assume initial is starting point before first month)
-      dan = (dan + aDan) * (1 + r);
-      dri = (dri + aDri) * (1 + r);
-      series.push(Math.round(dan + dri));
-    }
-
-    setHistory(prev => prev.map((row, idx) => {
-      const danNum = Number(row.dan || 0);
-      const driNum = Number(row.dri || 0);
-      return {
-        ...row,
-        total: Math.round(danNum + driNum),
-        meta: series[idx] ?? 0
-      };
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta.initialDan, meta.initialDri, meta.monthlyReturnPct, meta.aporteDan, meta.aporteDri]); // recalc only when meta params change
-
   return (
-    <Router>
-      <div className="container">
-        <div className="topbar">
-          <div>
-            <strong>💰 1 Milhão Grande</strong>
-            <div className="small">Painel privado (senha)</div>
-          </div>
-          <div className="navlinks">
-            {!locked && (
-              <>
-                <Link to="/">Dashboard</Link>
-                <Link to="/history">Histórico</Link>
-                <Link to="/meta">Meta</Link>
-              </>
-            )}
-          </div>
-          <div>
-            {!locked ? (
-              <button className="btn btn-ghost" onClick={() => setLocked(true)}>Bloquear</button>
-            ) : (
-              <></>
-            )}
-          </div>
-        </div>
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-xl font-bold mb-4">💰 1 Milhão Grande</h1>
 
-        <div className="card">
-          <Routes>
-            <Route path="/login" element={<Login onUnlock={() => setLocked(false)} />} />
-            <Route path="/"
-              element={locked ? <Navigate to="/login" replace /> :
-                <Dashboard history={history} setHistory={setHistory} meta={meta} /> } />
-            <Route path="/history"
-              element={locked ? <Navigate to="/login" replace /> :
-                <History rows={history} setRows={setHistory} />} />
-            <Route path="/meta"
-              element={locked ? <Navigate to="/login" replace /> :
-                <Meta meta={meta} setMeta={setMeta} />} />
-            <Route path="*" element={<Navigate to={locked ? "/login" : "/"} replace />} />
-          </Routes>
+      {/* Valores editáveis */}
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div>
+          <label className="block font-semibold text-blue-800">Dan</label>
+          <input
+            type="number"
+            value={danValue}
+            onChange={(e) => { setDanValue(e.target.value); updateValues(e.target.value, driValue); }}
+            className="border p-2 rounded w-full"
+          />
         </div>
-
-        <div className="footer-note small">Dados salvos no navegador. Faça backup copiando o JSON do localStorage se quiser.</div>
+        <div>
+          <label className="block font-semibold text-purple-600">Dri</label>
+          <input
+            type="number"
+            value={driValue}
+            onChange={(e) => { setDriValue(e.target.value); updateValues(danValue, e.target.value); }}
+            className="border p-2 rounded w-full"
+          />
+        </div>
+        <div>
+          <label className="block font-semibold">Total</label>
+          <input
+            type="number"
+            value={totalValue}
+            readOnly
+            className="border p-2 rounded w-full bg-gray-100"
+          />
+        </div>
       </div>
-    </Router>
+
+      {/* Barra de status */}
+      <div className="h-6 w-full bg-gray-300 rounded mb-6">
+        <div
+          className={`${getStatusColor()} h-6 rounded`}
+          style={{ width: `${Math.min((totalValue / metaValue) * 100, 100)}%` }}
+        ></div>
+      </div>
+
+      {/* Histórico editável */}
+      <h2 className="font-semibold mb-2">Histórico (editável)</h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full border">
+          <thead>
+            <tr>
+              <th className="border px-2 py-1">Mês/Ano</th>
+              <th className="border px-2 py-1">Dan R$</th>
+              <th className="border px-2 py-1">Dri R$</th>
+              <th className="border px-2 py-1">Total R$</th>
+              <th className="border px-2 py-1">Meta R$</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((line, idx) => (
+              <tr key={line.id}>
+                <td className="border px-2 py-1">{line.date}</td>
+                <td className="border px-2 py-1">
+                  <input
+                    type="number"
+                    value={line.dan}
+                    onChange={(e) => {
+                      const newLine = { ...line, dan: Number(e.target.value), total: Number(e.target.value) + Number(line.dri) };
+                      setDoc(doc(db, "households", "history", line.id), newLine);
+                    }}
+                    className="border p-1 w-full"
+                  />
+                </td>
+                <td className="border px-2 py-1">
+                  <input
+                    type="number"
+                    value={line.dri}
+                    onChange={(e) => {
+                      const newLine = { ...line, dri: Number(e.target.value), total: Number(line.dan) + Number(e.target.value) };
+                      setDoc(doc(db, "households", "history", line.id), newLine);
+                    }}
+                    className="border p-1 w-full"
+                  />
+                </td>
+                <td className="border px-2 py-1">{line.total}</td>
+                <td className="border px-2 py-1">
+                  <input
+                    type="number"
+                    value={line.meta}
+                    onChange={(e) => {
+                      const newLine = { ...line, meta: Number(e.target.value) };
+                      setDoc(doc(db, "households", "history", line.id), newLine);
+                    }}
+                    className="border p-1 w-full"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
