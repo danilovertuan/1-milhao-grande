@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import {
-  doc,
-  setDoc,
-  onSnapshot,
-  collection,
-  query,
-  orderBy
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -27,29 +20,31 @@ export default function App() {
   };
 
   // 🔹 Carregar valores mais recentes
-  useEffect(() => {
+  const loadValues = async () => {
     const docRef = doc(db, "households", "default");
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setDanValue(data.danValue || 0);
-        setDriValue(data.driValue || 0);
-        setTotalValue((data.danValue || 0) + (data.driValue || 0));
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      setDanValue(data.danValue || 0);
+      setDriValue(data.driValue || 0);
+      setTotalValue((data.danValue || 0) + (data.driValue || 0));
+    }
+  };
 
-  // 🔹 Carregar histórico 30 linhas
-  useEffect(() => {
+  // 🔹 Carregar histórico
+  const loadHistory = async () => {
     const colRef = collection(db, "households", "history");
-    const q = query(colRef, orderBy("date"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setHistory(data);
-    });
-    return () => unsubscribe();
-  }, []);
+    const snapshot = await getDocs(colRef);
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setHistory(data);
+  };
+
+  useEffect(() => {
+    if (authenticated) {
+      loadValues();
+      loadHistory();
+    }
+  }, [authenticated]);
 
   // 🔹 Atualizar valores Dan/Dri
   const updateValues = async (dan, dri) => {
@@ -59,6 +54,7 @@ export default function App() {
       totalValue: Number(dan) + Number(dri),
       date: new Date().toISOString()
     });
+    setTotalValue(Number(dan) + Number(dri));
   };
 
   const getStatusColor = () => {
@@ -154,9 +150,10 @@ export default function App() {
                   <input
                     type="number"
                     value={line.dan}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const newLine = { ...line, dan: Number(e.target.value), total: Number(e.target.value) + Number(line.dri) };
-                      setDoc(doc(db, "households", "history", line.id), newLine);
+                      await setDoc(doc(db, "households", "history", line.id), newLine);
+                      loadHistory();
                     }}
                     className="border p-1 w-full"
                   />
@@ -165,9 +162,10 @@ export default function App() {
                   <input
                     type="number"
                     value={line.dri}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const newLine = { ...line, dri: Number(e.target.value), total: Number(line.dan) + Number(e.target.value) };
-                      setDoc(doc(db, "households", "history", line.id), newLine);
+                      await setDoc(doc(db, "households", "history", line.id), newLine);
+                      loadHistory();
                     }}
                     className="border p-1 w-full"
                   />
@@ -177,9 +175,10 @@ export default function App() {
                   <input
                     type="number"
                     value={line.meta || metaValue}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const newLine = { ...line, meta: Number(e.target.value) };
-                      setDoc(doc(db, "households", "history", line.id), newLine);
+                      await setDoc(doc(db, "households", "history", line.id), newLine);
+                      loadHistory();
                     }}
                     className="border p-1 w-full"
                   />
