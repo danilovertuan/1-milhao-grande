@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
@@ -12,7 +11,7 @@ export default function App() {
   const [totalValue, setTotalValue] = useState(0);
 
   const [history, setHistory] = useState([]);
-  const [metaValue, setMetaValue] = useState(1000000); // meta Total
+  const [metaValue, setMetaValue] = useState(1000000);
 
   // 🔹 Autenticação por senha
   const handlePasswordSubmit = () => {
@@ -55,7 +54,6 @@ export default function App() {
     });
   };
 
-  // 🔹 Calcula cor da barra de status
   const getStatusColor = () => {
     if (totalValue >= metaValue) return "bg-green-500";
     if (totalValue >= metaValue * 0.8) return "bg-orange-500";
@@ -142,7 +140,7 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {history.map((line, idx) => (
+            {history.map((line) => (
               <tr key={line.id}>
                 <td className="border px-2 py-1">{line.date}</td>
                 <td className="border px-2 py-1">
