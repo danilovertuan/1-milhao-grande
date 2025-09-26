@@ -24,7 +24,6 @@ export default function Login({ onUnlock }) {
           <button className="btn btn-primary" type="submit">Entrar</button>
         </div>
         {err && <div style={{ color:"#dc2626", marginTop:8 }}>{err}</div>}
-        <div className="small" style={{ marginTop:10 }}>Senha única: <strong>atena</strong></div>
       </form>
     </div>
   );
