@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1 Milhão Grande</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js"></script>
+</head>
+<body>
+  <div id="login">
+    <h2>Digite a senha</h2>
+    <input type="password" id="senha">
+    <button onclick="checkSenha()">Entrar</button>
+  </div>
+
+  <div id="app" style="display:none;">
+    <h1>💰 1 Milhão Grande</h1>
+
+    <label>Dan:</label>
+    <input type="number" id="dan" oninput="updateTotal()"><br>
+
+    <label>Dri:</label>
+    <input type="number" id="dri" oninput="updateTotal()"><br>
+
+    <label>Total:</label>
+    <input type="number" id="total" readonly><br>
+
+    <button onclick="salvar()">Salvar</button>
+
+    <h3>Histórico</h3>
+    <ul id="historico"></ul>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
