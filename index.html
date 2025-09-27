@@ -1,100 +1,90 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>1 Milhão Grande</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js"></script>
+  <meta charset="UTF-8">
+  <title>1 Milhão Grande</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f0f0; margin:0; padding:0; }
+    .container { max-width: 900px; margin: auto; padding: 20px; background:#fff; }
+    input { width:100%; padding:5px; font-size:1rem; }
+    table { width:100%; border-collapse: collapse; margin-top:10px; }
+    table, th, td { border:1px solid #ccc; }
+    th, td { padding:5px; text-align:center; }
+    .barra { height:20px; margin-top:10px; background:#ddd; position:relative; }
+    .barra-fill { height:100%; width:0%; background:green; text-align:center; color:#fff; }
+    button { padding:5px 10px; margin:5px 0; }
+    nav button { margin-right:5px; }
+    .page { display:none; }
+  </style>
 </head>
 <body>
+<div class="container">
 
-<!-- Tela de login -->
-<div id="login">
-  <h2>Digite a senha</h2>
-  <input type="password" id="senha">
-  <button onclick="checkSenha()">Entrar</button>
-</div>
-
-<!-- Aplicativo -->
-<div id="app" style="display:none;">
-
-  <h1>💰 1 Milhão Grande</h1>
-
-  <!-- Navegação -->
-  <nav>
-    <button onclick="showPage('home')">Página Inicial</button>
-    <button onclick="showPage('historico')">Histórico</button>
-    <button onclick="showPage('aportes')">Aportes / Meta</button>
-  </nav>
-
-  <!-- PÁGINA INICIAL -->
-  <div id="homePage" class="page">
-    <div>
-      <label>Dan:</label>
-      <input type="number" id="dan" oninput="updateTotal()">
-    </div>
-    <div>
-      <label>Dri:</label>
-      <input type="number" id="dri" oninput="updateTotal()">
-    </div>
-    <div>
-      <label>Total:</label>
-      <input type="number" id="total" readonly>
-    </div>
-
-    <p>Meses para 1 milhão: <span id="mesesMeta">0</span></p>
-    <div id="barraStatus"></div>
-    <button onclick="salvar()">Salvar</button>
+  <!-- LOGIN -->
+  <div id="login">
+    <h2>Digite a senha:</h2>
+    <input type="password" id="senha" placeholder="Senha">
+    <button onclick="checkSenha()">Entrar</button>
   </div>
 
-  <!-- HISTÓRICO -->
-  <div id="historicoPage" class="page" style="display:none;">
-    <h3>Histórico (30 meses)</h3>
-    <table id="historico">
-      <thead>
-        <tr>
-          <th>Mês/Ano</th>
-          <th>Dan R$</th>
-          <th>Dri R$</th>
-          <th>Total R$</th>
-          <th>Meta R$</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <button onclick="salvarHistorico()">Salvar Histórico</button>
-  </div>
+  <!-- APP -->
+  <div id="app" style="display:none;">
 
-  <!-- APORTES / META -->
-  <div id="aportesPage" class="page" style="display:none;">
-    <h3>Aportes e Rendimento</h3>
-    <div>
-      <label>Valor Inicial Dan:</label>
-      <input type="number" id="aporteDan" value="0">
-    </div>
-    <div>
-      <label>Valor Inicial Dri:</label>
-      <input type="number" id="aporteDri" value="0">
-    </div>
-    <div>
-      <label>Aporte Mensal Dan:</label>
-      <input type="number" id="mensalDan" value="0">
-    </div>
-    <div>
-      <label>Aporte Mensal Dri:</label>
-      <input type="number" id="mensalDri" value="0">
-    </div>
-    <div>
-      <label>Rendimento %/mês:</label>
-      <input type="number" id="rendimento" value="1">
-    </div>
-    <button onclick="calcularProjecao()">Calcular 30 meses</button>
-  </div>
+    <h1>💰 1 Milhão Grande</h1>
+    <nav>
+      <button onclick="showPage('home')">Home</button>
+      <button onclick="showPage('historico')">Histórico</button>
+      <button onclick="showPage('aportes')">Aportes</button>
+    </nav>
 
+    <!-- HOME -->
+    <div id="homePage" class="page">
+      <h2>Valores atuais</h2>
+      <label>Dan:</label><input type="number" id="dan" oninput="updateTotal()"><br>
+      <label>Dri:</label><input type="number" id="dri" oninput="updateTotal()"><br>
+      <label>Total:</label><input type="number" id="total" readonly><br>
+      <div class="barra"><div id="barraStatus" class="barra-fill"></div></div>
+      <p>Meses até R$1.000.000: <span id="mesesMeta"></span></p>
+      <button onclick="salvar()">Salvar valores</button>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div id="historicoPage" class="page">
+      <h2>Histórico 30 meses</h2>
+      <table id="historico">
+        <thead>
+          <tr>
+            <th>Data (mm/aa)</th>
+            <th>Dan R$</th>
+            <th>Dri R$</th>
+            <th>Total R$</th>
+            <th>Meta R$</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button onclick="salvarHistorico()">Salvar histórico</button>
+    </div>
+
+    <!-- APORTES -->
+    <div id="aportesPage" class="page">
+      <h2>Definir Aportes Mensais</h2>
+      <label>Valor Inicial Dan:</label><input type="number" id="aporteDan" value="0"><br>
+      <label>Valor Inicial Dri:</label><input type="number" id="aporteDri" value="0"><br>
+      <label>Aporte Mensal Dan:</label><input type="number" id="mensalDan" value="0"><br>
+      <label>Aporte Mensal Dri:</label><input type="number" id="mensalDri" value="0"><br>
+      <label>Rendimento %/mês:</label><input type="number" id="rendimento" value="1"><br>
+      <button onclick="calcularProjecao()">Calcular Meta 30 meses</button>
+    </div>
+
+  </div>
 </div>
 
 <script src="script.js"></script>
+
 </body>
 </html>
