@@ -29,46 +29,47 @@ function showPage(page) {
   if(page==='aportes') document.getElementById('aportesPage').style.display='block';
 }
 
-// 🔹 Total e barra
+// 🔹 Atualiza Total e Barra
 function updateTotal() {
-  const dan = parseFloat(document.getElementById("dan").value)||0;
-  const dri = parseFloat(document.getElementById("dri").value)||0;
-  const total = dan+dri;
-  document.getElementById("total").value=total;
+  const dan = parseFloat(document.getElementById("dan").value) || 0;
+  const dri = parseFloat(document.getElementById("dri").value) || 0;
+  const total = dan + dri;
+  document.getElementById("total").value = total;
 
   const barra = document.getElementById("barraStatus");
-  barra.style.width = Math.min((total/1000000)*100,100)+'%';
-  barra.style.background = total>=1000000?'green': total>=800000?'orange':'red';
+  barra.style.width = Math.min((total / 1000000) * 100, 100) + '%';
+  barra.style.background = total >= 1000000 ? 'green' : total >= 800000 ? 'orange' : 'red';
 
-  // Meses estimados
-  const aporteDan = dan; 
-  const aporteDri = dri;
-  const rendimento = 1;
-  let saldo = total, meses=0;
-  while(saldo<1000000 && meses<120){
-    saldo = saldo*(1+rendimento/100) + aporteDan + aporteDri;
+  // Meses estimados para atingir 1 milhão
+  let saldo = total, meses = 0;
+  while (saldo < 1000000 && meses < 120) {
+    saldo = saldo * (1 + 0.01) + dan + dri; // 1% rendimento fixo
     meses++;
   }
   document.getElementById("mesesMeta").innerText = meses;
+
+  // 🔹 Salva automaticamente
+  salvarUltimosValores(dan, dri, total);
 }
 
-// 🔹 Salvar últimos valores
-async function salvar(){
-  const dan = parseFloat(document.getElementById("dan").value)||0;
-  const dri = parseFloat(document.getElementById("dri").value)||0;
-  await db.collection("valores").add({
-    dan,dri,total:dan+dri,data:new Date().toISOString()
+// 🔹 Salvar últimos valores no Firestore
+async function salvarUltimosValores(dan, dri, total) {
+  await db.collection("valores").doc("ultimo").set({
+    dan,
+    dri,
+    total,
+    data: new Date().toISOString()
   });
-  carregarHistorico();
 }
 
-// 🔹 Carregar último valor
-async function carregarUltimosValores(){
-  const snapshot = await db.collection("valores").orderBy("data","desc").limit(1).get();
-  if(!snapshot.empty){
-    const doc = snapshot.docs[0].data();
-    document.getElementById("dan").value=doc.dan;
-    document.getElementById("dri").value=doc.dri;
+// 🔹 Carregar últimos valores
+async function carregarUltimosValores() {
+  const doc = await db.collection("valores").doc("ultimo").get();
+  if (doc.exists) {
+    const dados = doc.data();
+    document.getElementById("dan").value = dados.dan;
+    document.getElementById("dri").value = dados.dri;
+    document.getElementById("total").value = dados.total;
     updateTotal();
   }
 }
