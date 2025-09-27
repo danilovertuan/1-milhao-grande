@@ -1,38 +1,35 @@
-// src/App.jsx
-import { useState } from "react";
+import React, { useState } from "react";
 
-function App() {
+export default function App() {
   const [senha, setSenha] = useState("");
-  const [acesso, setAcesso] = useState(false);
+  const [liberado, setLiberado] = useState(false);
 
-  function validarSenha() {
+  const checkSenha = () => {
     if (senha === "atena") {
-      setAcesso(true);
+      setLiberado(true);
     } else {
-      alert("Senha incorreta!");
+      alert("Senha incorreta");
     }
-  }
+  };
 
-  if (!acesso) {
+  if (!liberado) {
     return (
-      <div style={{ padding: 20 }}>
-        <h1>Digite a senha</h1>
+      <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+        <h2>Digite a senha</h2>
         <input
           type="password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
         />
-        <button onClick={validarSenha}>Entrar</button>
+        <button onClick={checkSenha}>Entrar</button>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Bem-vindo ao 1 Milhão Grande 🚀</h1>
-      <p>Aqui vai o resto do app...</p>
+    <div style={{ padding: "20px" }}>
+      <h1>💰 1 Milhão Grande</h1>
+      <p>Bem-vindo! O app está funcionando 🚀</p>
     </div>
   );
 }
-
-export default App;
