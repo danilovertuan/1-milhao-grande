@@ -94,6 +94,20 @@ function gerarHistoricoInicial(){
 
 async function carregarHistorico(){
   gerarHistoricoInicial();
+
+  const doc = await db.collection("historico").doc("30meses").get();
+  if(doc.exists){
+    const dados = doc.data().dados;
+    const rows = document.querySelectorAll("#historico tbody tr");
+    dados.forEach((d,i)=>{
+      if(rows[i]){
+        rows[i].cells[1].innerText = d.dan;
+        rows[i].cells[2].innerText = d.dri;
+        rows[i].cells[3].innerText = d.total;
+        rows[i].cells[4].innerText = d.meta;
+      }
+    });
+  }
 }
 
 // 🔹 Salvar histórico
@@ -114,7 +128,7 @@ async function salvarHistorico(){
   alert("Histórico salvo!");
 }
 
-// 🔹 Projeção 30 meses
+// 🔹 Projeção 30 meses (apenas coluna Meta)
 function calcularProjecao(){
   const aporteDan=parseFloat(document.getElementById("aporteDan").value)||0;
   const aporteDri=parseFloat(document.getElementById("aporteDri").value)||0;
@@ -122,23 +136,16 @@ function calcularProjecao(){
   const mensalDri=parseFloat(document.getElementById("mensalDri").value)||0;
   const rendimento=parseFloat(document.getElementById("rendimento").value)||1;
 
-  const tbody=document.querySelector("#historico tbody");
-  tbody.innerHTML="";
+  const rows=document.querySelectorAll("#historico tbody tr");
   let dan=aporteDan, dri=aporteDri;
-  let d=new Date(2025,8,1);
-  for(let i=0;i<30;i++){
+
+  rows.forEach(r=>{
     dan = dan*(1+rendimento/100)+mensalDan;
     dri = dri*(1+rendimento/100)+mensalDri;
-    const total=dan+dri;
-    const mm=String(d.getMonth()+1).padStart(2,'0');
-    const aa=d.getFullYear();
-    tbody.innerHTML += `<tr>
-      <td>${mm}/${aa}</td>
-      <td contenteditable="true">${Math.round(dan)}</td>
-      <td contenteditable="true">${Math.round(dri)}</td>
-      <td contenteditable="true">${Math.round(total)}</td>
-      <td contenteditable="true">0</td>
-    </tr>`;
-    d.setMonth(d.getMonth()+1);
-  }
+    const total = dan + dri;
+
+    const tds = r.querySelectorAll("td");
+    // Preencher apenas a coluna de Meta
+    tds[4].innerText = Math.round(total);
+  });
 }
