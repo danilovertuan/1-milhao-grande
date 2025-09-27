@@ -11,6 +11,7 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(app);
 
+// 🔹 Login
 function checkSenha() {
   const senha = document.getElementById("senha").value;
   if (senha === "atena") {
@@ -22,12 +23,35 @@ function checkSenha() {
   }
 }
 
+// 🔹 Atualiza total e barra de status
 function updateTotal() {
   const dan = parseFloat(document.getElementById("dan").value) || 0;
   const dri = parseFloat(document.getElementById("dri").value) || 0;
-  document.getElementById("total").value = dan + dri;
+  const total = dan + dri;
+  document.getElementById("total").value = total;
+
+  // Barra de status
+  const barra = document.getElementById("barraStatus");
+  if(total >= 1000000) barra.style.background = "green";
+  else if(total >= 800000) barra.style.background = "orange";
+  else barra.style.background = "red";
+  barra.style.width = Math.min((total/1000000)*100, 100) + "%";
+
+  // Estimativa de meses
+  const aporteDan = dan; // aqui você pode usar aporte mensal real
+  const aporteDri = dri;
+  const rendimento = 1; // % ao mês
+  let meses = 0;
+  let saldo = total;
+
+  while (saldo < 1000000 && meses < 120) {
+    saldo = saldo * (1 + rendimento/100) + aporteDan + aporteDri;
+    meses++;
+  }
+  document.getElementById("mesesMeta").innerText = meses;
 }
 
+// 🔹 Salvar valores no Firestore
 async function salvar() {
   const dan = parseFloat(document.getElementById("dan").value) || 0;
   const dri = parseFloat(document.getElementById("dri").value) || 0;
@@ -40,6 +64,7 @@ async function salvar() {
   carregarHistorico();
 }
 
+// 🔹 Carregar últimos valores
 async function carregarUltimosValores() {
   const snapshot = await db.collection("valores").orderBy("data", "desc").limit(1).get();
   if (!snapshot.empty) {
@@ -51,12 +76,18 @@ async function carregarUltimosValores() {
   carregarHistorico();
 }
 
+// 🔹 Carregar histórico (últimos 30 registros)
 async function carregarHistorico() {
-  const snapshot = await db.collection("valores").orderBy("data", "desc").limit(10).get();
-  const historico = document.getElementById("historico");
-  historico.innerHTML = "";
+  const snapshot = await db.collection("valores").orderBy("data", "desc").limit(30).get();
+  const tbody = document.querySelector("#historico tbody");
+  tbody.innerHTML = "";
   snapshot.forEach(doc => {
-    const data = new Date(doc.data().data).toLocaleDateString();
-    historico.innerHTML += `<li>${data}: Dan R$${doc.data().dan} | Dri R$${doc.data().dri} | Total R$${doc.data().total}</li>`;
+    const d = new Date(doc.data().data).toLocaleDateString();
+    tbody.innerHTML += `<tr>
+      <td>${d}</td>
+      <td>${doc.data().dan}</td>
+      <td>${doc.data().dri}</td>
+      <td>${doc.data().total}</td>
+    </tr>`;
   });
 }
