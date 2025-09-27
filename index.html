@@ -9,28 +9,47 @@
   <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js"></script>
 </head>
 <body>
+  <!-- Tela de login -->
   <div id="login">
     <h2>Digite a senha</h2>
     <input type="password" id="senha">
     <button onclick="checkSenha()">Entrar</button>
   </div>
 
+  <!-- Aplicativo -->
   <div id="app" style="display:none;">
     <h1>💰 1 Milhão Grande</h1>
 
-    <label>Dan:</label>
-    <input type="number" id="dan" oninput="updateTotal()"><br>
+    <div>
+      <label>Dan:</label>
+      <input type="number" id="dan" oninput="updateTotal()">
+    </div>
+    <div>
+      <label>Dri:</label>
+      <input type="number" id="dri" oninput="updateTotal()">
+    </div>
+    <div>
+      <label>Total:</label>
+      <input type="number" id="total" readonly>
+    </div>
 
-    <label>Dri:</label>
-    <input type="number" id="dri" oninput="updateTotal()"><br>
-
-    <label>Total:</label>
-    <input type="number" id="total" readonly><br>
+    <p>Meses para 1 milhão: <span id="mesesMeta">0</span></p>
+    <div id="barraStatus"></div>
 
     <button onclick="salvar()">Salvar</button>
 
-    <h3>Histórico</h3>
-    <ul id="historico"></ul>
+    <h3>Histórico (últimos 30 registros)</h3>
+    <table id="historico">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Dan</th>
+          <th>Dri</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script src="script.js"></script>
